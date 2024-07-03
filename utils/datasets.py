@@ -11,7 +11,7 @@ class MedicalNerDataset(Dataset):
 
     def __init__(self):
         super(MedicalNerDataset, self).__init__()
-        with open("./datasets/medical_ner.json", encoding='utf-8') as f:
+        with open("./tools/medical_ner.json", encoding='utf-8') as f:
             self.datasets = json.load(f)
 
     def __getitem__(self, index):
