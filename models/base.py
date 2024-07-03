@@ -1,18 +1,21 @@
 import argparse
+import os
 
+os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 import lightning.pytorch as pl
 import torch.optim
-from transformers import BertTokenizerFast, get_linear_schedule_with_warmup, \
-    AutoModelForTokenClassification
+from transformers import get_linear_schedule_with_warmup, \
+    BertTokenizer, BertModel
 
+cache_dir = '/root/card_model/'
 
 class MedicalNerModel(pl.LightningModule):
 
     def __init__(self, args: argparse.Namespace):
         super(MedicalNerModel, self).__init__()
         self.args = args
-        self.tokenizer = BertTokenizerFast.from_pretrained('bert-base-chinese')
-        self.model = AutoModelForTokenClassification.from_pretrained("bert-base-chinese", num_labels=5)
+        self.tokenizer = BertTokenizer.from_pretrained('hfl/chinese-roberta-wwm-ext-large', cache_dir=cache_dir)
+        self.model = BertModel.from_pretrained('hfl/chinese-roberta-wwm-ext-large', cache_dir=cache_dir)
 
         self.val_correct_num = 0
         self.val_total_num = 0

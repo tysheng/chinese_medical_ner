@@ -10,9 +10,10 @@ def check_is_valid(string):
 
 
 def load_datasets():
-    with open("annotated_data.txt", encoding='utf-8') as f:
+    with open("/root/card/annotated_data.txt", encoding='utf-8') as f:
         lines = f.readlines()
-
+    with open("/root/card/sd_list.txt", encoding='utf-8') as f:
+        lines2 = f.readlines()
     sentences = []
     for line in lines:
         items = line.split("\t")
@@ -27,7 +28,10 @@ def load_datasets():
             continue
 
         sentences.append(sent)
-
+    for i in lines2:
+        if not i:
+            continue
+        sentences.append(i.strip())
     return sentences
 
 
