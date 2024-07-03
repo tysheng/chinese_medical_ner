@@ -27,7 +27,7 @@ class MedicalNerCollateFn(object):
 
     def __init__(self, args):
         self.args = args
-        self.tokenizer =  BertTokenizer.from_pretrained('hfl/chinese-roberta-wwm-ext-large', cache_dir=cache_dir,local_files_only=True)
+        self.tokenizer =  BertTokenizer.from_pretrained('bert-base-chinese', cache_dir=cache_dir,local_files_only=True)
 
     def __call__(self, batch):
         input_ids_list = []

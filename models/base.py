@@ -14,8 +14,8 @@ class MedicalNerModel(pl.LightningModule):
     def __init__(self, args: argparse.Namespace):
         super(MedicalNerModel, self).__init__()
         self.args = args
-        self.tokenizer = BertTokenizer.from_pretrained('hfl/chinese-roberta-wwm-ext-large', cache_dir=cache_dir,local_files_only=True)
-        self.model = BertModel.from_pretrained('hfl/chinese-roberta-wwm-ext-large', cache_dir=cache_dir,local_files_only=True)
+        self.tokenizer = BertTokenizer.from_pretrained('bert-base-chinese', cache_dir=cache_dir,local_files_only=True)
+        self.model = BertModel.from_pretrained('bert-base-chinese', cache_dir=cache_dir,local_files_only=True)
 
         self.val_correct_num = 0
         self.val_total_num = 0
