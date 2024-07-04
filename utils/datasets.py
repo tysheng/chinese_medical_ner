@@ -3,12 +3,13 @@ import os
 
 os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 import torch
-import transformers
 from torch.utils.data import Dataset, DataLoader
-from transformers import BertTokenizerFast, BertTokenizer
+from transformers import BertTokenizer, BertTokenizerFast
 from torch.nn.utils.rnn import pad_sequence
 
 cache_dir = '/root/card_model/'
+
+
 class MedicalNerDataset(Dataset):
 
     def __init__(self):
@@ -22,12 +23,12 @@ class MedicalNerDataset(Dataset):
     def __len__(self):
         return len(self.datasets)
 
-
 class MedicalNerCollateFn(object):
 
     def __init__(self, args):
         self.args = args
-        self.tokenizer =  BertTokenizer.from_pretrained('hfl/chinese-roberta-wwm-ext-large', cache_dir=cache_dir,local_files_only=True)
+        self.tokenizer = BertTokenizerFast.from_pretrained('bert-base-chinese', cache_dir=cache_dir,
+                                                           local_files_only=True)
 
     def __call__(self, batch):
         input_ids_list = []
