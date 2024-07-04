@@ -3,4 +3,4 @@ python train.py \
        --batch-size 32 \
        --workers 8 \
        --device cuda \
-       --epochs 50
+       --epochs 10
