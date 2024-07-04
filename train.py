@@ -8,7 +8,7 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 
 from models.base import MedicalNerModel
 from utils.datasets import create_dataloader
-
+torch.set_float32_matmul_precision('high')
 class Train:
     """Class to handle training of the MedicalNerModel."""
 
