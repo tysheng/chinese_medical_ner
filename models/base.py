@@ -3,34 +3,47 @@ import os
 
 os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 import lightning.pytorch as pl
+import torch
 import torch.optim
-from transformers import get_linear_schedule_with_warmup, \
-    BertTokenizer, BertModel
+from torch import nn
+from transformers import get_linear_schedule_with_warmup, BertTokenizer, BertModel
 
 cache_dir = '/root/card_model/'
 
-class MedicalNerModel(pl.LightningModule):
 
+class MedicalNerModel(pl.LightningModule):
     def __init__(self, args: argparse.Namespace):
         super(MedicalNerModel, self).__init__()
         self.args = args
-        self.tokenizer = BertTokenizer.from_pretrained('hfl/chinese-roberta-wwm-ext-large', cache_dir=cache_dir,local_files_only=True)
-        self.model = BertModel.from_pretrained('hfl/chinese-roberta-wwm-ext-large', cache_dir=cache_dir,local_files_only=True)
+        self.tokenizer = BertTokenizer.from_pretrained('hfl/chinese-roberta-wwm-ext-large', cache_dir=cache_dir,
+                                                       local_files_only=True)
+        self.model = BertModel.from_pretrained('hfl/chinese-roberta-wwm-ext-large', cache_dir=cache_dir,
+                                               local_files_only=True)
+
+        # Add a classification head
+        self.classifier = nn.Linear(self.model.config.hidden_size, self.args.num_labels)
 
         self.val_correct_num = 0
         self.val_total_num = 0
 
+    def forward(self, **inputs):
+        outputs = self.model(**inputs)
+        sequence_output = outputs.last_hidden_state
+        logits = self.classifier(sequence_output)
+        return logits
+
     def training_step(self, batch, batch_idx, *args, **kwargs):
-        inputs, targets, = batch
-        outputs = self.model(**inputs, labels=targets)
-        loss = outputs.loss
-        outputs = outputs.logits
+        inputs, targets = batch
+        logits = self(**inputs)
+        loss_fct = nn.CrossEntropyLoss()
+        loss = loss_fct(logits.view(-1, self.args.num_labels), targets.view(-1))
+        outputs = logits.argmax(-1)
 
         self.log("train_loss", loss.item(), prog_bar=True)
 
         return {
             'loss': loss,
-            'outputs': outputs.argmax(-1) * inputs['attention_mask'],
+            'outputs': outputs * inputs['attention_mask'],
             'targets': targets,
         }
 
@@ -46,9 +59,8 @@ class MedicalNerModel(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx, *args, **kwargs):
         inputs, targets = batch
-        outputs = self.model(**inputs).logits
-
-        preds = outputs.argmax(-1) * inputs['attention_mask']
+        logits = self(**inputs)
+        preds = logits.argmax(-1) * inputs['attention_mask']
 
         correct_num = torch.all(preds == targets, dim=1).sum().item()
         total_num = targets.size(0)
@@ -64,7 +76,8 @@ class MedicalNerModel(pl.LightningModule):
         }
 
     def on_validation_epoch_end(self) -> None:
-        print("Epoch",self.current_epoch, ". val_acc:", self.val_correct_num / self.val_total_num)
+        epoch_val_acc = self.val_correct_num / self.val_total_num
+        print(f"Epoch {self.current_epoch}. val_acc: {epoch_val_acc}")
         self.val_correct_num = 0
         self.val_total_num = 0
 
@@ -72,7 +85,6 @@ class MedicalNerModel(pl.LightningModule):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.args.lr)
 
         t_total = len(self.args.train_loader) * self.args.epochs
-
         warmup_steps = int(0.1 * t_total)
         scheduler = get_linear_schedule_with_warmup(
             optimizer, num_warmup_steps=warmup_steps, num_training_steps=t_total
@@ -94,25 +106,24 @@ class MedicalNerModel(pl.LightningModule):
                     flag = True
                     continue
 
-                if flag and pred_idx != 2 and pred_idx != 3:
-                    # 出现了不应该出现的index
-                    print("Abnormal prediction results for sentence", sentences[i])
-                    start_idx = -1
-                    end_idx = -1
-                    continue
-
-                if pred_idx == 3:
-                    end_idx = idx
-
-                    words.append({
-                        "start": start_idx,
-                        "end": end_idx + 1,
-                        "word": sentences[i][start_idx:end_idx+1]
-                    })
+                if flag and pred_idx not in {2, 3}:
+                    # Unexpected index found
+                    print(f"Abnormal prediction results for sentence {sentences[i]}")
                     start_idx = -1
                     end_idx = -1
                     flag = False
                     continue
+
+                if pred_idx == 3:
+                    end_idx = idx
+                    words.append({
+                        "start": start_idx,
+                        "end": end_idx + 1,
+                        "word": sentences[i][start_idx:end_idx + 1]
+                    })
+                    start_idx = -1
+                    end_idx = -1
+                    flag = False
 
             preds.append(words)
 
